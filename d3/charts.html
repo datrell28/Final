@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+
+    <meta charset="UTF-8">
+    <title>Swimming Scatter plot</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+  </head>
+  <body>
+    <style> body {
+    background: linear-gradient(to bottom right, #b3e5fc, #e6ffff);
+} </style>
+
+    <!-- Add a title for the chart -->
+    <h1>Da'Trell Williams Scatter plot</h1>
+    <a href="https://docs.google.com/document/d/1ht718DBqKacG7E5PId01wa6FVxFSM1N4BDyUzqX3dJ0/edit?usp=sharing">Link to  Final document</a>
+    <a href="https://youtu.be/5zidsNuYvcs">Link to  Final document video</a>
+
+    <!-- Create a container for the chart -->
+    <div id="chart-container"></div>
+    <style>
+  #chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+</style>
+    <script>
+
+      // Define the dimensions of the SVG element
+      const margin = {top: 50, right: 20, bottom: 60, left: 60};
+      const width = 900 - margin.left - margin.right;
+      const height = 600 - margin.top - margin.bottom;
+
+      // Create the SVG element
+      const svg = d3.select("#chart-container")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Load the data from the CSV file
+      d3.csv("SwimmingT.csv", d => ({
+        // d is short for data
+        location: d.Location,
+        year: +d.Year,
+        distance: +d.Distance,
+        stroke: d.Stroke,
+        gender: d.Gender,
+        team: d.Team,
+        athlete: d.Athlete,
+        results: +d.Results,
+        rank: +d.Rank
+      })).then(data => {
+        console.log(data);
+        // Define the scales for the x and y axes
+        const xScale = d3.scaleLinear()
+      .domain([d3.min(data, d => d.distance) - 10, d3.max(data, d => d.distance) + 10])
+      .range([0, width]);
+
+    const yScale = d3.scaleLinear()
+      .domain([d3.min(data, d => +d.results) - 1, d3.max(data, d => +d.results) + 1])
+      .range([height, 0]);
+      // Define the jitter function
+      function jitter(range) {
+        return d3.randomUniform(-range, range)();
+      }
+
+      // Create the circles of the scatter plot
+      const tooltip = svg.append("text")
+        .attr("class", "tooltip")
+        .attr("x", 10)
+        .attr("y", height + 30)
+        .attr("fill", "black")
+        .style("font-size", "12px")
+        .style("text-transform", "lowercase")
+        .style("visibility", "hidden");
+
+      svg.selectAll("circle")
+        .data(data)
+        .join("circle")
+        .attr("cx", d => xScale(d.distance) + jitter(5))
+        .attr("cy", d => yScale(d.results) + jitter(5))
+        .attr("r", 5)
+        .attr("fill", d => d.gender === "Women" ? "red" : "blue")
+        .on("mouseover", function(d) {
+          d3.select(this)
+            .attr("r", 10);
+          tooltip.text(`${d.athlete}, ${d.distance}, ${d.results}`)
+            .style("visibility", "visible");
+        })
+        .on("mousemove", function() {
+          tooltip.attr("x", d3.event.x)
+            .attr("y", d3.event.y);
+        })
+        .on("mouseout", function() {
+          d3.select(this)
+            .attr("r", 5);
+          tooltip.style("visibility", "hidden");
+        });
+
+      // Add text labels for each dot
+      svg.selectAll("text")
+        .data(data)
+        .join("text")
+        .text(d => d.athlete)
+        .attr("x", d => xScale(d.distance) + 10 + jitter(20))
+        .attr("y", d => yScale(d.results) + 5 + jitter(20))
+        .attr("font-size", "10px")
+        .attr("fill", "white")
+        .style("text-shadow", "1px 1px black")
+        .style("visibility", "hidden")
+        .on("mouseover", function() {
+          d3.select(this)
+            .style("visibility", "visible");
+        })
+        .on("mouseout", function() {
+          d3.select(this)
+            .style("visibility", "hidden");
+        });
+
+        // Add the x-axis to the scatter plot
+        const numTicks = Math.floor(xScale.range()[1] / 50); // calculate number of ticks based on range
+    svg.append("g")
+       .attr("transform", `translate(0,${height})`)
+       .call(d3.axisBottom(xScale).ticks(numTicks).tickFormat(d => d + "m"))
+       .append("text")
+       .attr("fill", "#000")
+       .attr("x", width / 2)
+       .attr("y", margin.bottom - 10)
+       .attr("text-anchor", "middle")
+       .text("Distance (m)");;
+
+
+        // Add the y-axis to the scatter plot
+        svg.append("g")
+          .call(d3.axisLeft(yScale).ticks(25).tickFormat(d3.format(".1f")))
+          .append("text")
+          .attr("fill", "#000")
+          .attr("transform", "rotate(-90)")
+          .attr("x", -height / 2)
+          .attr("y", -margin.left + 10)
+          .attr("text-anchor", "middle")
+          .text("Results (s)");
+
+          // Create a new g element for the legend
+          const legend = svg.append("g")
+    .attr("transform", `translate(${width - 175}, ${height - 80})`);
+
+  // Add a rectangle for each gender
+  legend.selectAll("rect")
+    .data(["Men", "Women"])
+    .join("rect")
+    .attr("x", (d, i) => i * 70)
+    .attr("y", 0)
+    .attr("width", 20)
+    .attr("height", 10)
+    .attr("fill", d => d === "Women" ? "red" : "blue");
+
+  // Add text labels for each gender, positioned to the right of the rectangle
+  legend.selectAll("text")
+    .data(["Men", "Women"])
+    .join("text")
+    .attr("x", (d, i) => i * 70 + 30)
+    .attr("y", 9)
+    .text(d => d)
+    .attr("font-size", "12px");
+
+        // Add a title to the scatter plot
+    svg.append("text")
+      .attr("x", width / 2)
+      .attr("y", -margin.top + 30)
+      .attr("text-anchor", "middle")
+      .style("font-size", "20px")
+      .text("Tokyo olympics Swimming results");
+    });
+    </script>
+    </body>
+    </html>
